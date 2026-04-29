@@ -197,6 +197,41 @@ if st.button("採点する"):
 
     st.write(f"### 合計得点：**{score} / 5**")
 
+   import matplotlib.pyplot as plt
+import numpy as np
+
+st.subheader("【グラフ表示：f(x) と f'(x)】")
+
+for i, (formula, x_val, correct, choices) in enumerate(problems):
+    st.write(f"### 第 {i+1} 問 のグラフ")
+
+    # SymPy から関数を作成
+    f_expr = sp.sympify(formula.replace("^", "**"))
+    f_prime_expr = sp.diff(f_expr, x)
+
+    # 数値関数へ変換
+    f_lam = sp.lambdify(x, f_expr, "numpy")
+    f_prime_lam = sp.lambdify(x, f_prime_expr, "numpy")
+
+    # グラフ範囲
+    X = np.linspace(x_val - 5, x_val + 5, 400)
+    Y1 = f_lam(X)
+    Y2 = f_prime_lam(X)
+
+    # 描画
+    fig, ax = plt.subplots()
+    ax.plot(X, Y1, label="f(x)", color="blue")
+    ax.plot(X, Y2, label="f'(x)", color="red")
+    ax.axvline(x_val, color="gray", linestyle="--", alpha=0.5)
+    ax.scatter([x_val], [correct], color="red")
+
+    ax.set_title(f"f(x) と f'(x) のグラフ（第 {i+1} 問）")
+    ax.legend()
+    ax.grid(True)
+
+    st.pyplot(fig)
+ 
+    
     # 微分の解説
     st.subheader("【微分の解説】")
     st.markdown("""
