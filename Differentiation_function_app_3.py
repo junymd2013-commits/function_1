@@ -196,39 +196,48 @@ if st.button("採点する"):
 
     st.write(f"### 合計得点：**{score} / 5**")
 
-
     # --------------------------------
-    # グラフ表示
+    # グラフ表示（f(x), f'(x), 接線）
     # --------------------------------
-    st.subheader("【グラフ表示：f(x) と f'(x)】")
+    st.subheader("Graph: f(x), f'(x), and Tangent Line")
 
     for i, (formula, x_val, correct, choices) in enumerate(problems):
-        st.write(f"### 第 {i+1} 問 のグラフ")
+        st.write(f"### Graph for Question {i+1}")
 
+        # SymPy → 数値関数
         f_expr = sp.sympify(formula.replace("^", "**"))
         f_prime_expr = sp.diff(f_expr, x)
 
         f_lam = sp.lambdify(x, f_expr, "numpy")
         f_prime_lam = sp.lambdify(x, f_prime_expr, "numpy")
 
+        # グラフ範囲
         X = np.linspace(x_val - 5, x_val + 5, 400)
 
         Y1 = f_lam(X)
         Y2 = f_prime_lam(X)
 
-        # ★ 定数関数などでスカラーが返った場合に配列に伸ばす
+        # ★ スカラー対応（定数関数）
         if np.isscalar(Y1):
             Y1 = np.full_like(X, Y1)
         if np.isscalar(Y2):
             Y2 = np.full_like(X, Y2)
 
+        # ★ 接線の式
+        f_x0 = f_lam(x_val)
+        slope = f_prime_lam(x_val)
+        tangent = slope * (X - x_val) + f_x0
+
         fig, ax = plt.subplots()
+
         ax.plot(X, Y1, label="f(x)", color="blue")
         ax.plot(X, Y2, label="f'(x)", color="red")
-        ax.axvline(x_val, color="gray", linestyle="--", alpha=0.5)
-        ax.scatter([x_val], [correct], color="red")
+        ax.plot(X, tangent, label="tangent line", color="green")
 
-        ax.set_title(f"f(x) と f'(x) のグラフ（第 {i+1} 問）")
+        ax.axvline(x_val, color="gray", linestyle="--", alpha=0.5)
+        ax.scatter([x_val], [f_x0], color="green")
+
+        ax.set_title(f"f(x), f'(x), Tangent (Q{i+1})")
         ax.legend()
         ax.grid(True)
 
