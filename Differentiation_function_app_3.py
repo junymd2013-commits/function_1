@@ -231,7 +231,7 @@ if st.button("採点する"):
         fig, ax = plt.subplots()
 
         ax.plot(X, Y1, label="f(x)", color="blue")
-        ax.plot(X, Y2, label="f'(x)", color="red")
+#       ax.plot(X, Y2, label="f'(x)", color="red")
         ax.plot(X, tangent, label="tangent line", color="green")
 
         ax.axvline(x_val, color="gray", linestyle="--", alpha=0.5)
