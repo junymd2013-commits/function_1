@@ -196,6 +196,7 @@ if st.button("採点する"):
 
     st.write(f"### 合計得点：**{score} / 5**")
 
+
     # --------------------------------
     # グラフ表示
     # --------------------------------
@@ -211,8 +212,15 @@ if st.button("採点する"):
         f_prime_lam = sp.lambdify(x, f_prime_expr, "numpy")
 
         X = np.linspace(x_val - 5, x_val + 5, 400)
+
         Y1 = f_lam(X)
         Y2 = f_prime_lam(X)
+
+        # ★ 定数関数などでスカラーが返った場合に配列に伸ばす
+        if np.isscalar(Y1):
+            Y1 = np.full_like(X, Y1)
+        if np.isscalar(Y2):
+            Y2 = np.full_like(X, Y2)
 
         fig, ax = plt.subplots()
         ax.plot(X, Y1, label="f(x)", color="blue")
@@ -225,6 +233,7 @@ if st.button("採点する"):
         ax.grid(True)
 
         st.pyplot(fig)
+
 
     # --------------------------------
     # 微分の解説
