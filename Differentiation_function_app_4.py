@@ -8,7 +8,7 @@ import numpy as np
 x = sp.Symbol('x')
 
 # --------------------------------
-# 分数係数を (p/q)×x^n の形に整える
+# 表示用：分数係数を (p/q)×x^n の形に整える
 # --------------------------------
 def format_expr_readable(expr):
     expr = sp.expand(expr)
@@ -35,6 +35,7 @@ def format_expr_readable(expr):
     expr_str = expr_str.replace("+ -", "- ")
     return expr_str
 
+
 # --------------------------------
 # 4択の選択肢を作る
 # --------------------------------
@@ -48,6 +49,7 @@ def make_choices(correct):
     random.shuffle(choices)
     return choices
 
+
 # --------------------------------
 # 易しいレベル
 # --------------------------------
@@ -58,8 +60,8 @@ def generate_easy():
     f = C
     f_prime = sp.diff(f, x)
     x_val = random.randint(-5, 5)
-    correct = f_prime.subs(x, x_val)
-    problems.append((format_expr_readable(f), x_val, correct, make_choices(correct)))
+    correct = int(f_prime.subs(x, x_val))
+    problems.append((f, format_expr_readable(f), x_val, correct, make_choices(correct)))
 
     for _ in range(4):
         a = random.randint(1, 5)
@@ -68,10 +70,11 @@ def generate_easy():
         f = a*x**2 + b*x + c
         f_prime = sp.diff(f, x)
         x_val = random.randint(-5, 5)
-        correct = f_prime.subs(x, x_val)
-        problems.append((format_expr_readable(f), x_val, correct, make_choices(correct)))
+        correct = int(f_prime.subs(x, x_val))
+        problems.append((f, format_expr_readable(f), x_val, correct, make_choices(correct)))
 
     return problems
+
 
 # --------------------------------
 # 普通レベル
@@ -94,69 +97,57 @@ def generate_normal():
 
         f_prime = sp.diff(f, x)
         x_val = random.randint(-5, 5)
-        correct = f_prime.subs(x, x_val)
-        problems.append((format_expr_readable(f), x_val, correct, make_choices(correct)))
+        correct = int(f_prime.subs(x, x_val))
+        problems.append((f, format_expr_readable(f), x_val, correct, make_choices(correct)))
 
     return problems
 
+
 # --------------------------------
-# 難しいレベル（整数解保証）
+# 難しいレベル（答えを −25〜25 に制限）
 # --------------------------------
 def generate_hard():
     problems = []
 
-    coef_type = random.choice(["fraction", "negative"])
-    if coef_type == "fraction":
-        p = random.randint(1, 5)
-        q = random.randint(2, 6)
-        a = Fraction(p, q)
-        x_val = random.choice([q, -q, 2*q, -2*q])
-    else:
-        a = -random.randint(1, 5)
-        x_val = random.randint(-5, 5)
-
-    b = random.randint(-5, 5)
-    c = random.randint(-5, 5)
-    d = random.randint(-5, 5)
-    e = random.randint(-5, 5)
-
-    f = a*x**4 + b*x**3 + c*x**2 + d*x + e
-    f_prime = sp.diff(f, x)
-    correct = f_prime.subs(x, x_val)
-    problems.append((format_expr_readable(f), x_val, correct, make_choices(correct)))
-
-    special_count = 1
-    for _ in range(4):
+    def generate_one():
         degree = random.choice([2, 3, 4])
 
-        if special_count < 3 and random.random() < 0.5:
-            coef_type = random.choice(["fraction", "negative"])
-            special_count += 1
-        else:
-            coef_type = "integer"
+        # 係数の制御（分数 or 整数 or 負）
+        coef_type = random.choice(["fraction", "negative", "integer"])
 
         if coef_type == "fraction":
-            p = random.randint(1, 5)
-            q = random.randint(2, 6)
+            p = random.randint(1, 4)
+            q = random.randint(2, 5)
             a = Fraction(p, q)
             x_val = random.choice([q, -q, 2*q, -2*q])
         elif coef_type == "negative":
-            a = -random.randint(1, 5)
-            x_val = random.randint(-5, 5)
+            a = -random.randint(1, 4)
+            x_val = random.randint(-4, 4)
         else:
-            a = random.randint(1, 5)
-            x_val = random.randint(-5, 5)
+            a = random.randint(1, 4)
+            x_val = random.randint(-4, 4)
 
-        coeffs = [random.randint(-5, 5) for _ in range(degree)]
+        coeffs = [random.randint(-4, 4) for _ in range(degree)]
         f = a*x**degree
         for i, c in enumerate(coeffs):
             f += c * x**(degree - 1 - i)
 
         f_prime = sp.diff(f, x)
-        correct = f_prime.subs(x, x_val)
-        problems.append((format_expr_readable(f), x_val, correct, make_choices(correct)))
+        correct = int(f_prime.subs(x, x_val))
+
+        # ★ 答えが −25〜25 の範囲に収まるまで作り直す
+        if -25 <= correct <= 25:
+            return f, x_val, correct
+        else:
+            return generate_one()
+
+    # 5題作成
+    for _ in range(5):
+        f, x_val, correct = generate_one()
+        problems.append((f, format_expr_readable(f), x_val, correct, make_choices(correct)))
 
     return problems
+
 
 # --------------------------------
 # Streamlit UI
@@ -184,14 +175,15 @@ problems = st.session_state.problems
 
 st.subheader(f"【{level}レベル：5題】")
 
-for i, (formula, x_val, correct, choices) in enumerate(problems):
-    st.write(f"**第 {i+1} 問： f(x) = {formula}、x = {x_val} のとき f'(x) = ?**")
+for i, (f_expr, formula_str, x_val, correct, choices) in enumerate(problems):
+    st.write(f"**第 {i+1} 問： f(x) = {formula_str}、x = {x_val} のとき f'(x) = ?**")
     st.session_state.answers[i] = st.radio(
         f"あなたの解答（第{i+1}問）",
         choices,
         key=f"q{i}",
         index=None
     )
+
 
 # --------------------------------
 # 採点
@@ -200,7 +192,7 @@ if st.button("採点する"):
     score = 0
     st.subheader("【採点結果】")
 
-    for i, (formula, x_val, correct, choices) in enumerate(problems):
+    for i, (f_expr, formula_str, x_val, correct, choices) in enumerate(problems):
         user_ans = st.session_state.answers[i]
         if user_ans == correct:
             st.success(f"第 {i+1} 問：正解 → {correct}")
@@ -215,10 +207,9 @@ if st.button("採点する"):
     # --------------------------------
     st.subheader("Graph: f(x) and Tangent Line")
 
-    for i, (formula, x_val, correct, choices) in enumerate(problems):
+    for i, (f_expr, formula_str, x_val, correct, choices) in enumerate(problems):
         st.write(f"### Graph for Question {i+1}")
 
-        f_expr = sp.sympify(formula.replace("^", "**"))
         f_prime_expr = sp.diff(f_expr, x)
 
         f_lam = sp.lambdify(x, f_expr, "numpy")
