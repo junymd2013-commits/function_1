@@ -2,8 +2,8 @@ import streamlit as st
 import random
 import sympy as sp
 from fractions import Fraction
-import matplotlib.pyplot as plt   # ← 追加
-import numpy as np               # ← 追加
+import matplotlib.pyplot as plt
+import numpy as np
 
 x = sp.Symbol('x')
 
@@ -148,15 +148,13 @@ def generate_hard():
 
 st.title("微分計算アプリ（難易度3段階・5題セット）")
 
-# ラジオボタン
 level = st.radio("難易度を選んでください", ["易しい", "普通", "難しい"])
 
 # 問題生成ボタン
 if st.button("問題を生成する"):
-    # 解答リセット
-    st.session_state.answers = {}
+    st.session_state.answers = {}     # 解答リセット
+    st.session_state.problems = []    # 問題リセット
 
-    # 新しい問題生成
     if level == "易しい":
         st.session_state.problems = generate_easy()
     elif level == "普通":
@@ -164,20 +162,21 @@ if st.button("問題を生成する"):
     else:
         st.session_state.problems = generate_hard()
 
-if "problems" not in st.session_state:
+if "problems" not in st.session_state or not st.session_state.problems:
     st.stop()
 
 problems = st.session_state.problems
 
 st.subheader(f"【{level}レベル：5題】")
 
-# 4択表示
+# 4択表示（最初は index=None で未選択）
 for i, (formula, x_val, correct, choices) in enumerate(problems):
     st.write(f"**第 {i+1} 問： f(x) = {formula}、x = {x_val} のとき f'(x) = ?**")
     st.session_state.answers[i] = st.radio(
         f"あなたの解答（第{i+1}問）",
         choices,
-        key=f"q{i}"
+        key=f"q{i}",
+        index=None
     )
 
 # --------------------------------
@@ -197,42 +196,39 @@ if st.button("採点する"):
 
     st.write(f"### 合計得点：**{score} / 5**")
 
-   import matplotlib.pyplot as plt
-import numpy as np
+    # --------------------------------
+    # グラフ表示
+    # --------------------------------
+    st.subheader("【グラフ表示：f(x) と f'(x)】")
 
-st.subheader("【グラフ表示：f(x) と f'(x)】")
+    for i, (formula, x_val, correct, choices) in enumerate(problems):
+        st.write(f"### 第 {i+1} 問 のグラフ")
 
-for i, (formula, x_val, correct, choices) in enumerate(problems):
-    st.write(f"### 第 {i+1} 問 のグラフ")
+        f_expr = sp.sympify(formula.replace("^", "**"))
+        f_prime_expr = sp.diff(f_expr, x)
 
-    # SymPy から関数を作成
-    f_expr = sp.sympify(formula.replace("^", "**"))
-    f_prime_expr = sp.diff(f_expr, x)
+        f_lam = sp.lambdify(x, f_expr, "numpy")
+        f_prime_lam = sp.lambdify(x, f_prime_expr, "numpy")
 
-    # 数値関数へ変換
-    f_lam = sp.lambdify(x, f_expr, "numpy")
-    f_prime_lam = sp.lambdify(x, f_prime_expr, "numpy")
+        X = np.linspace(x_val - 5, x_val + 5, 400)
+        Y1 = f_lam(X)
+        Y2 = f_prime_lam(X)
 
-    # グラフ範囲
-    X = np.linspace(x_val - 5, x_val + 5, 400)
-    Y1 = f_lam(X)
-    Y2 = f_prime_lam(X)
+        fig, ax = plt.subplots()
+        ax.plot(X, Y1, label="f(x)", color="blue")
+        ax.plot(X, Y2, label="f'(x)", color="red")
+        ax.axvline(x_val, color="gray", linestyle="--", alpha=0.5)
+        ax.scatter([x_val], [correct], color="red")
 
-    # 描画
-    fig, ax = plt.subplots()
-    ax.plot(X, Y1, label="f(x)", color="blue")
-    ax.plot(X, Y2, label="f'(x)", color="red")
-    ax.axvline(x_val, color="gray", linestyle="--", alpha=0.5)
-    ax.scatter([x_val], [correct], color="red")
+        ax.set_title(f"f(x) と f'(x) のグラフ（第 {i+1} 問）")
+        ax.legend()
+        ax.grid(True)
 
-    ax.set_title(f"f(x) と f'(x) のグラフ（第 {i+1} 問）")
-    ax.legend()
-    ax.grid(True)
+        st.pyplot(fig)
 
-    st.pyplot(fig)
- 
-    
+    # --------------------------------
     # 微分の解説
+    # --------------------------------
     st.subheader("【微分の解説】")
     st.markdown("""
 ### ■ 基本公式
@@ -291,3 +287,15 @@ f'(x) = 4ax^3 + 3bx^2 + 2cx + d
 
 
 """)
+
+    # --------------------------------
+    # もう一度・終了ボタン
+    # --------------------------------
+    if st.button("もう一度"):
+        st.session_state.answers = {}
+        st.session_state.problems = []
+        st.experimental_rerun()
+
+    if st.button("終了"):
+        st.session_state.clear()
+        st.write("お疲れさまでした。アプリを終了します。")
